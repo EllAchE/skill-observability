@@ -1,0 +1,4 @@
+interface:
+  display_name: "Update Skill"
+  short_description: "Revise an existing skill safely"
+  default_prompt: "Use $update-skill to incorporate this guidance into the owning skill."

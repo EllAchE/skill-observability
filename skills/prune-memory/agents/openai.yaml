@@ -1,0 +1,4 @@
+interface:
+  display_name: "Prune Memory"
+  short_description: "Audit and prune local agent memory"
+  default_prompt: "Use $prune-memory to audit this project memory store and propose safe cleanup."

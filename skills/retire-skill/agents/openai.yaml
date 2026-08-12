@@ -1,0 +1,4 @@
+interface:
+  display_name: "Retire Skill"
+  short_description: "Safely retire a dead or unused skill"
+  default_prompt: "Use $retire-skill to verify and safely retire this exact skill."

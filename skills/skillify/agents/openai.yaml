@@ -1,0 +1,4 @@
+interface:
+  display_name: "Skillify Session"
+  short_description: "Turn one prior session into a skill"
+  default_prompt: "Use $skillify to extract a reusable skill from this prior session."

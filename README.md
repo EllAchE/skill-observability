@@ -1,15 +1,19 @@
 # Skill Observability
 
-Measure agent skills from the local transcripts you already have. No collector,
-database, API key, or model call is required.
+Measure, maintain, and retire agent skills from the local artifacts you already
+have. No collector, database, API key, or model call is required.
 
-The toolkit answers three different questions:
+The toolkit covers runtime observability, inventory health, memory hygiene, and
+the full skill lifecycle:
 
 | Command | Question |
 | --- | --- |
 | `skill-perf` | Which Claude Code skills are slow, and is the time going to tools, model work, or user waits? |
 | `skill-cost` | Which skills and base conversations drive estimated Claude token cost? |
 | `agent-usage` | Where did recent Claude Code and Codex tokens go by source, model, project, and session? |
+| `skill-audit` | Which skills are used, referenced, structurally broken, new and unobserved, or conservative retirement candidates? |
+| `memory-audit` | Which memories are expired, missing expiry, dangling from the index, or orphaned on disk? |
+| `memory-prune` | Which expired memories can be removed, with deletion explicitly gated behind `--delete`? |
 
 It also includes a Bash `SessionEnd` hook that refreshes performance reports on a
 random sample of sessions. The default is one in twenty after the first run.
@@ -38,12 +42,32 @@ random sample of sessions. The default is one in twenty after the first run.
 - the latest backend-reported Codex plan windows found in local rollouts;
 - streaming reads for large Codex rollout files.
 
+`skill-audit` gives the inventory lens:
+
+- frontmatter, naming, folder, duplicate-name, and relative-link checks;
+- recent Claude transcript evidence by skill;
+- callers in hooks, scripts, commands, policies, and other skills;
+- conservative `retire-candidate` classification for old skills with neither
+  recent transcript evidence nor strong callers.
+
+`memory-audit` and `memory-prune` give the memory lens:
+
+- expiry coverage and date validation;
+- dangling `MEMORY.md` links and unindexed memory files;
+- dry-run-first expiry cleanup with explicit deletion.
+
+The repository also contains portable agent workflows for creating, updating,
+extracting, auditing, promoting memory into, pruning memory around, and safely
+retiring skills. The scripts are the deterministic core; the skills teach an
+agent how to make the judgment calls around them.
+
 ## Requirements
 
 - Node.js 20 or newer.
 - Claude Code transcripts under `~/.claude/projects` for skill attribution.
 - Codex rollouts under `~/.codex/sessions` for Codex usage and plan windows.
-- Bash for the optional sampled hook.
+- Bash for the optional sampled hook and `memory-prune`; their Node.js audit
+  companions are cross-platform.
 
 `CLAUDE_CONFIG_DIR` and `CODEX_HOME` are honored when those stores live elsewhere.
 
@@ -64,6 +88,24 @@ npm link
 ```
 
 There are no runtime dependencies.
+
+### Install the optional skills
+
+The CLI installation above does not modify either agent's personal skill store.
+To install the bundled workflows, copy only the folders you want:
+
+```bash
+cp -R skills/* "${CODEX_HOME:-$HOME/.codex}/skills/"
+```
+
+For Claude Code:
+
+```bash
+cp -R skills/* "$HOME/.claude/skills/"
+```
+
+The bundled skills expect the CLI package to be installed globally or the
+repository checkout to remain available.
 
 ## Use
 
@@ -105,8 +147,47 @@ Inspect recent usage across Claude Code and Codex:
 agent-usage --days 7 --top 20
 ```
 
-Every command supports `--json` for machine-readable output and `--help` for its
-full option list.
+Audit a repository's active skill inventory:
+
+```bash
+skill-audit --root ./skills --repo . --days 90
+```
+
+Use `--no-transcripts` for a structure-and-callers-only CI check.
+
+Inspect only conservative retirement candidates:
+
+```bash
+skill-audit --root ./skills --repo . --days 90 --candidates --json
+```
+
+Audit a Claude memory store, then preview and explicitly execute expiry cleanup:
+
+```bash
+memory-audit /path/to/memory
+memory-prune /path/to/memory
+memory-prune --delete /path/to/memory
+```
+
+The Node audit commands support `--json` for machine-readable output. Every
+command supports `--help` for its full option list.
+
+## Skill lifecycle workflows
+
+| Skill | Responsibility |
+| --- | --- |
+| `audit-skills` | Interpret inventory health and retirement evidence without editing anything. |
+| `create-skill` | Establish deterministic applicability, author a concise skill, test resources, and validate it. |
+| `update-skill` | Revise an existing skill without duplicating ownership or breaking callers. |
+| `skillify` | Extract one prior Claude or Codex session into a focused reusable workflow. |
+| `retire-skill` | Verify disuse and replacement coverage, obtain approval, remove the skill, and validate callers. |
+| `prune-memory` | Reduce local memory context and remove expired entries with explicit deletion approval. |
+| `promote-memory` | Raise durable memories into tracked policy or skills using a two-pass promote-then-delete rule. |
+
+`skill-audit` never deletes anything. A `retire-candidate` means only that the
+local evidence window saw no recent Claude attribution and no strong repository
+caller. Dynamic dispatch, other machines, alternate transcript stores, and human
+use may still exist. The `retire-skill` workflow owns that final decision.
 
 ## Sample completed sessions
 
@@ -170,6 +251,7 @@ plan-window view and uses local tokens only to explain where usage went.
 ## Privacy and caveats
 
 - The tools read local transcript files and make no network requests.
+- `memory-prune` is dry-run by default and changes files only with `--delete`.
 - JSONL transcripts can contain prompts, tool inputs, paths, and other sensitive
   data. Human-readable performance reports include short slow-call summaries; do
   not publish reports without reviewing them.
@@ -179,6 +261,9 @@ plan-window view and uses local tokens only to explain where usage went.
 - A parent agent call includes the subagent's elapsed time, but the parent timing
   report excludes sidechain internals to avoid double-counting.
 - The sampled hook uses Bash and is not supported natively on Windows.
+- `skill-audit` currently uses Claude's `attributionSkill` and explicit `Skill`
+  calls for usage evidence. Codex rollouts contribute to aggregate usage reports,
+  but not yet to per-skill liveness classification.
 
 ## Development
 
@@ -186,8 +271,8 @@ plan-window view and uses local tokens only to explain where usage went.
 npm test
 ```
 
-The tests build temporary transcript stores and exercise all three CLIs plus the
-sampled hook. No real transcripts are read.
+The tests build temporary transcript, skill, and memory stores and exercise every
+CLI plus the sampled hook. No real transcripts or memories are read.
 
 ## License
 

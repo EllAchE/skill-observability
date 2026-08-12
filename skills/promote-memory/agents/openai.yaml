@@ -1,0 +1,4 @@
+interface:
+  display_name: "Promote Memory"
+  short_description: "Promote durable memory into shared policy"
+  default_prompt: "Use $promote-memory to raise durable memories into their tracked source of truth."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create Skill"
+  short_description: "Create a focused reusable agent skill"
+  default_prompt: "Use $create-skill to turn this repeatable workflow into a validated skill."
