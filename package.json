@@ -1,0 +1,39 @@
+{
+  "name": "skill-observability",
+  "version": "0.1.0",
+  "description": "Local transcript observability for Claude Code skills and Codex sessions",
+  "type": "module",
+  "bin": {
+    "agent-usage": "./bin/source-usage.mjs",
+    "skill-cost": "./bin/usage-cost.mjs",
+    "skill-perf": "./bin/skill-perf.mjs"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "bin/",
+    "LICENSE",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EllAchE/skill-observability.git"
+  },
+  "bugs": {
+    "url": "https://github.com/EllAchE/skill-observability/issues"
+  },
+  "homepage": "https://github.com/EllAchE/skill-observability#readme",
+  "keywords": [
+    "agent-skills",
+    "claude-code",
+    "codex",
+    "observability",
+    "tokens"
+  ],
+  "author": "Logan Harless",
+  "license": "MIT"
+}
