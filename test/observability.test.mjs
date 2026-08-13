@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, readdirSync, realpathSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -168,5 +168,29 @@ test(
     });
     assert.equal(result.status, 0, result.stderr || result.stdout);
     assert.ok(readdirSync(output).some((name) => name.endsWith("s-example-skill.txt")));
+  }
+);
+
+test(
+  "memory-prune is dry-run by default and deletes only with an explicit flag",
+  { skip: process.platform === "win32" },
+  () => {
+    const root = mkdtempSync(join(tmpdir(), "memory-prune-test-"));
+    const index = join(root, "MEMORY.md");
+    const expired = join(root, "expired.md");
+    writeFileSync(index, "# Memory\n\n- [Expired](expired.md) — stale\n");
+    writeFileSync(expired, "---\nexpires_at: 2026-01-01\n---\nExpired\n");
+    const script = join(repositoryRoot, "skills", "prune-memory", "scripts", "prune-expired-memories.sh");
+    const environment = { ...process.env, MEMORY_PRUNE_TODAY: "2026-08-12" };
+
+    const dryRun = spawnSync("bash", [script, root], { encoding: "utf8", env: environment });
+    assert.equal(dryRun.status, 0, dryRun.stderr || dryRun.stdout);
+    assert.ok(existsSync(expired));
+    assert.match(dryRun.stdout, /mode=dry-run/);
+
+    const deletion = spawnSync("bash", [script, "--delete", root], { encoding: "utf8", env: environment });
+    assert.equal(deletion.status, 0, deletion.stderr || deletion.stdout);
+    assert.equal(existsSync(expired), false);
+    assert.doesNotMatch(readFileSync(index, "utf8"), /expired\.md/);
   }
 );

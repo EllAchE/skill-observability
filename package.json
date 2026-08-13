@@ -1,10 +1,11 @@
 {
   "name": "skill-observability",
-  "version": "0.1.0",
-  "description": "Local transcript observability for Claude Code skills and Codex sessions",
+  "version": "0.2.0",
+  "description": "Local observability tooling and portable agent-skill maintenance workflows",
   "type": "module",
   "bin": {
     "agent-usage": "./bin/source-usage.mjs",
+    "memory-prune": "./skills/prune-memory/scripts/prune-expired-memories.sh",
     "skill-cost": "./bin/usage-cost.mjs",
     "skill-perf": "./bin/skill-perf.mjs"
   },
@@ -16,6 +17,7 @@
   },
   "files": [
     "bin/",
+    "skills/",
     "LICENSE",
     "README.md"
   ],
