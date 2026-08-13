@@ -1,22 +1,19 @@
 # Skill Observability
 
-Measure, maintain, and retire agent skills from the local artifacts you already
-have. No collector, database, API key, or model call is required.
-
-The toolkit covers runtime observability, inventory health, memory hygiene, and
-the full skill lifecycle:
+Measure agent skills from the local transcripts you already have, and reuse a small
+set of existing skill-maintenance workflows. No collector, database, API key, or
+model call is required.
 
 | Command | Question |
 | --- | --- |
 | `skill-perf` | Which Claude Code skills are slow, and is the time going to tools, model work, or user waits? |
 | `skill-cost` | Which skills and base conversations drive estimated Claude token cost? |
 | `agent-usage` | Where did recent Claude Code and Codex tokens go by source, model, project, and session? |
-| `skill-audit` | Which skills are used, referenced, structurally broken, new and unobserved, or conservative retirement candidates? |
-| `memory-audit` | Which memories are expired, missing expiry, dangling from the index, or orphaned on disk? |
-| `memory-prune` | Which expired memories can be removed, with deletion explicitly gated behind `--delete`? |
+| `memory-prune` | Which memory files have expired or invalid expiry metadata, and which approved files should be deleted? |
 
-It also includes a Bash `SessionEnd` hook that refreshes performance reports on a
-random sample of sessions. The default is one in twenty after the first run.
+The repository also includes a Bash `SessionEnd` hook that refreshes performance
+reports on a random sample of sessions. The default is one in twenty after the first
+run.
 
 ## What it measures
 
@@ -42,32 +39,16 @@ random sample of sessions. The default is one in twenty after the first run.
 - the latest backend-reported Codex plan windows found in local rollouts;
 - streaming reads for large Codex rollout files.
 
-`skill-audit` gives the inventory lens:
-
-- frontmatter, naming, folder, duplicate-name, and relative-link checks;
-- recent Claude transcript evidence by skill;
-- callers in hooks, scripts, commands, policies, and other skills;
-- conservative `retire-candidate` classification for old skills with neither
-  recent transcript evidence nor strong callers.
-
-`memory-audit` and `memory-prune` give the memory lens:
-
-- expiry coverage and date validation;
-- dangling `MEMORY.md` links and unindexed memory files;
-- dry-run-first expiry cleanup with explicit deletion.
-
-The repository also contains portable agent workflows for creating, updating,
-extracting, auditing, promoting memory into, pruning memory around, and safely
-retiring skills. The scripts are the deterministic core; the skills teach an
-agent how to make the judgment calls around them.
+`memory-prune` is the existing expiry-sweep script bundled with the `prune-memory`
+workflow. It reports expired, invalid, and missing expiry metadata. Its default is a
+dry run; deletion requires `--delete`.
 
 ## Requirements
 
 - Node.js 20 or newer.
 - Claude Code transcripts under `~/.claude/projects` for skill attribution.
 - Codex rollouts under `~/.codex/sessions` for Codex usage and plan windows.
-- Bash for the optional sampled hook and `memory-prune`; their Node.js audit
-  companions are cross-platform.
+- Bash for the optional sampled hook and `memory-prune`.
 
 `CLAUDE_CONFIG_DIR` and `CODEX_HOME` are honored when those stores live elsewhere.
 
@@ -91,8 +72,8 @@ There are no runtime dependencies.
 
 ### Install the optional skills
 
-The CLI installation above does not modify either agent's personal skill store.
-To install the bundled workflows, copy only the folders you want:
+The CLI installation does not modify either agent's personal skill store. Copy only
+the workflows you want:
 
 ```bash
 cp -R skills/* "${CODEX_HOME:-$HOME/.codex}/skills/"
@@ -104,8 +85,16 @@ For Claude Code:
 cp -R skills/* "$HOME/.claude/skills/"
 ```
 
-The bundled skills expect the CLI package to be installed globally or the
-repository checkout to remain available.
+These are portable adaptations of existing DSRC workflows, not newly designed
+skills:
+
+| Skill | Responsibility |
+| --- | --- |
+| `create-skill` | Establish deterministic applicability, author a concise skill, test resources, and validate it. |
+| `update-skill` | Revise an existing skill without duplicating ownership or breaking callers. |
+| `skillify` | Extract one prior Claude or Codex session into a focused reusable workflow. |
+| `prune-memory` | Reduce local memory context and remove expired entries with explicit deletion approval. |
+| `share-memory` | Raise durable memories into tracked policy or skills using a two-pass promote-then-delete rule. |
 
 ## Use
 
@@ -147,56 +136,24 @@ Inspect recent usage across Claude Code and Codex:
 agent-usage --days 7 --top 20
 ```
 
-Audit a repository's active skill inventory:
+Preview and explicitly execute expiry cleanup:
 
 ```bash
-skill-audit --root ./skills --repo . --days 90
-```
-
-Use `--no-transcripts` for a structure-and-callers-only CI check.
-
-Inspect only conservative retirement candidates:
-
-```bash
-skill-audit --root ./skills --repo . --days 90 --candidates --json
-```
-
-Audit a Claude memory store, then preview and explicitly execute expiry cleanup:
-
-```bash
-memory-audit /path/to/memory
 memory-prune /path/to/memory
 memory-prune --delete /path/to/memory
 ```
 
-The Node audit commands support `--json` for machine-readable output. Every
-command supports `--help` for its full option list.
-
-## Skill lifecycle workflows
-
-| Skill | Responsibility |
-| --- | --- |
-| `audit-skills` | Interpret inventory health and retirement evidence without editing anything. |
-| `create-skill` | Establish deterministic applicability, author a concise skill, test resources, and validate it. |
-| `update-skill` | Revise an existing skill without duplicating ownership or breaking callers. |
-| `skillify` | Extract one prior Claude or Codex session into a focused reusable workflow. |
-| `retire-skill` | Verify disuse and replacement coverage, obtain approval, remove the skill, and validate callers. |
-| `prune-memory` | Reduce local memory context and remove expired entries with explicit deletion approval. |
-| `promote-memory` | Raise durable memories into tracked policy or skills using a two-pass promote-then-delete rule. |
-
-`skill-audit` never deletes anything. A `retire-candidate` means only that the
-local evidence window saw no recent Claude attribution and no strong repository
-caller. Dynamic dispatch, other machines, alternate transcript stores, and human
-use may still exist. The `retire-skill` workflow owns that final decision.
+The Node commands support `--json` for machine-readable output. Every command
+supports `--help` for its full option list.
 
 ## Sample completed sessions
 
-The optional hook always runs when no previous report exists. After that it rolls
-one in twenty on each completed Claude Code session. Sampling invokes only the
-local Node parser, so it adds no token or API spend.
+The optional hook always runs when no previous report exists. After that it rolls one
+in twenty on each completed Claude Code session. Sampling invokes only the local Node
+parser, so it adds no token or API spend.
 
-Add this command hook to the `SessionEnd` list in your Claude Code settings. Use
-the absolute path to your checkout:
+Add this command hook to the `SessionEnd` list in your Claude Code settings. Use the
+absolute path to your checkout:
 
 ```json
 {
@@ -216,8 +173,8 @@ the absolute path to your checkout:
 }
 ```
 
-The hook refreshes `/tmp/claude/skill-perf/` from the ten most recent sessions.
-Set `SKILL_PERF_SAMPLE_RATE=1` to run every time, or set `SKILL_PERF_DIR` to use a
+The hook refreshes `/tmp/claude/skill-perf/` from the ten most recent sessions. Set
+`SKILL_PERF_SAMPLE_RATE=1` to run every time, or set `SKILL_PERF_DIR` to use a
 different report directory.
 
 ## How the timing split works
@@ -229,16 +186,16 @@ overlapping tool intervals so parallel work is counted once, then computes:
 wall clock = merged tool-busy time + model time
 ```
 
-Model time therefore includes thinking, generation, skill-document processing,
-API latency, and queue latency. Compare runs with each other rather than treating
-it as pure inference time.
+Model time therefore includes thinking, generation, skill-document processing, API
+latency, and queue latency. Compare runs with each other rather than treating it as
+pure inference time.
 
 ## Cost estimates
 
-`skill-cost` weights input, output, five-minute cache writes, one-hour cache
-writes, and cache reads separately. Defaults model standard Anthropic API rates;
-they are estimates rather than billing records. Long-context premiums, service
-tiers, and temporary promotions are not inferred.
+`skill-cost` weights input, output, five-minute cache writes, one-hour cache writes,
+and cache reads separately. Defaults model standard Anthropic API rates; they are
+estimates rather than billing records. Long-context premiums, service tiers, and
+temporary promotions are not inferred.
 
 Override any family rate with environment variables such as `OPUS_OUTPUT`,
 `SONNET_READ`, or `HAIKU_INPUT`. Check current rates on the
@@ -250,20 +207,18 @@ plan-window view and uses local tokens only to explain where usage went.
 
 ## Privacy and caveats
 
-- The tools read local transcript files and make no network requests.
+- The tools read local transcript and memory files and make no network requests.
 - `memory-prune` is dry-run by default and changes files only with `--delete`.
 - JSONL transcripts can contain prompts, tool inputs, paths, and other sensitive
-  data. Human-readable performance reports include short slow-call summaries; do
-  not publish reports without reviewing them.
-- Skill timing and cost attribution require Claude Code's `attributionSkill`
-  field. Unattributed responses remain visible in the base-conversation bucket.
+  data. Human-readable performance reports include short slow-call summaries; do not
+  publish reports without reviewing them.
+- Skill timing and cost attribution require Claude Code's `attributionSkill` field.
+  Unattributed responses remain visible in the base-conversation bucket.
 - Transcript formats are owned by their respective clients and may change.
 - A parent agent call includes the subagent's elapsed time, but the parent timing
   report excludes sidechain internals to avoid double-counting.
-- The sampled hook uses Bash and is not supported natively on Windows.
-- `skill-audit` currently uses Claude's `attributionSkill` and explicit `Skill`
-  calls for usage evidence. Codex rollouts contribute to aggregate usage reports,
-  but not yet to per-skill liveness classification.
+- The sampled hook and memory-pruning script use Bash and are not supported natively
+  on Windows.
 
 ## Development
 
@@ -271,8 +226,8 @@ plan-window view and uses local tokens only to explain where usage went.
 npm test
 ```
 
-The tests build temporary transcript, skill, and memory stores and exercise every
-CLI plus the sampled hook. No real transcripts or memories are read.
+The tests build temporary transcript and memory stores and exercise every command
+plus the sampled hook. No real transcripts or memories are read.
 
 ## License
 

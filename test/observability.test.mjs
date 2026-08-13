@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, utimesSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -171,34 +171,6 @@ test(
   }
 );
 
-test("memory-audit reports expiry and index consistency debt", () => {
-  const root = mkdtempSync(join(tmpdir(), "memory-audit-test-"));
-  writeFileSync(
-    join(root, "MEMORY.md"),
-    [
-      "# Memory",
-      "",
-      "- [Active](active.md) — useful",
-      "- [Expired](expired.md) — stale",
-      "- [Missing](missing.md) — audit debt",
-      "- [Gone](gone.md) — dangling"
-    ].join("\n") + "\n"
-  );
-  writeFileSync(join(root, "active.md"), "---\nexpires_at: 2027-01-01\n---\nActive\n");
-  writeFileSync(join(root, "expired.md"), "---\nmetadata:\n  expires_at: 2026-01-01\n---\nExpired\n");
-  writeFileSync(join(root, "missing.md"), "---\ntype: reference\n---\nMissing\n");
-  writeFileSync(join(root, "orphan.md"), "---\nexpiresAt: 9999-12-31\n---\nOrphan\n");
-
-  const result = runNode("memory-audit.mjs", [root, "--today", "2026-08-12", "--json"]);
-  const report = JSON.parse(result.stdout);
-
-  assert.deepEqual(report.expired, [{ file: "expired.md", expiresAt: "2026-01-01" }]);
-  assert.deepEqual(report.missing, ["missing.md"]);
-  assert.deepEqual(report.dangling, ["gone.md"]);
-  assert.deepEqual(report.orphaned, ["orphan.md"]);
-  assert.deepEqual(report.permanent, ["orphan.md"]);
-});
-
 test(
   "memory-prune is dry-run by default and deletes only with an explicit flag",
   { skip: process.platform === "win32" },
@@ -222,43 +194,3 @@ test(
     assert.doesNotMatch(readFileSync(index, "utf8"), /expired\.md/);
   }
 );
-
-test("skill-audit separates usage, callers, broken skills, and retirement candidates", () => {
-  const root = mkdtempSync(join(tmpdir(), "skill-audit-test-"));
-  const skillRoot = join(root, "skills");
-  const claudeConfig = join(root, "claude");
-  const makeSkill = (folder, name, body = "Follow the workflow.\n") => {
-    const directory = join(skillRoot, folder);
-    mkdirSync(directory, { recursive: true });
-    const path = join(directory, "SKILL.md");
-    writeFileSync(path, `---\nname: ${name}\ndescription: Test ${name}.\n---\n\n${body}`);
-    return path;
-  };
-  makeSkill("used-skill", "used-skill");
-  makeSkill("referenced-skill", "referenced-skill");
-  const candidate = makeSkill("old-skill", "old-skill");
-  makeSkill("broken-folder", "broken-skill", "Read [missing](references/missing.md).\n");
-  const oldTime = new Date("2025-01-01T00:00:00.000Z");
-  utimesSync(candidate, oldTime, oldTime);
-  mkdirSync(join(root, ".claude"), { recursive: true });
-  writeFileSync(join(root, ".claude", "hooks.json"), '{"command":"run referenced-skill"}\n');
-  writeJsonl(join(claudeConfig, "projects", "-example", "session.jsonl"), [
-    {
-      type: "assistant",
-      timestamp: new Date().toISOString(),
-      attributionSkill: "used-skill",
-      message: { content: [{ type: "text", text: "done" }] }
-    }
-  ]);
-
-  const result = runNode("skill-audit.mjs", ["--root", skillRoot, "--repo", root, "--days", "90", "--json"], {
-    env: { CLAUDE_CONFIG_DIR: claudeConfig }
-  });
-  const report = JSON.parse(result.stdout);
-  const statuses = Object.fromEntries(report.skills.map((skill) => [skill.name, skill.status]));
-
-  assert.equal(statuses["used-skill"], "used");
-  assert.equal(statuses["referenced-skill"], "referenced");
-  assert.equal(statuses["old-skill"], "retire-candidate");
-  assert.equal(statuses["broken-skill"], "broken");
-});

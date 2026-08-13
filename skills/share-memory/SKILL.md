@@ -1,9 +1,9 @@
 ---
-name: promote-memory
+name: share-memory
 description: Promote durable facts and operating rules from a personal Claude Code memory store into the nearest version-controlled skill, AGENTS.md, documentation, or knowledge file, then remove only memories already verified as redundant on the repository's default branch. Use for sharing, raising, consolidating, or codifying memories.
 ---
 
-# Promote Memory
+# Share Memory
 
 Move durable guidance to its real source of truth without losing the only live copy.
 
@@ -11,7 +11,8 @@ Move durable guidance to its real source of truth without losing the only live c
 
 1. Resolve the project memory directory and exit when `MEMORY.md` is absent or empty.
 2. Identify the target repository and read its instructions before proposing changes.
-3. Run `memory-audit <memory-dir>` to establish index and expiry health.
+3. Record the index byte size, entry count, and candidate memory files. Run
+   `memory-prune <memory-dir>` to inventory expiry debt without changing anything.
 
 ## Classify Every Candidate
 
@@ -46,6 +47,6 @@ For each `REDUNDANT` item, re-confirm the complete rule on the current default b
 Only then, and only with explicit approval of the exact files, delete the backing
 memory and its `MEMORY.md` row. If verification is incomplete, downgrade to `KEEP`.
 
-Finish by running `memory-audit` again and reporting verdict counts, tracked changes,
-deletions, and index size before/after. Promotion and deletion are intentionally a
+Finish by running `memory-prune` again and reporting verdict counts, tracked changes,
+deletions, and index size before and after. Promotion and deletion are intentionally a
 two-pass process.

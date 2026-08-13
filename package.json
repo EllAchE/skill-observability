@@ -1,13 +1,11 @@
 {
   "name": "skill-observability",
   "version": "0.2.0",
-  "description": "Local observability and lifecycle tooling for agent skills, memory, Claude Code, and Codex",
+  "description": "Local observability tooling and portable agent-skill maintenance workflows",
   "type": "module",
   "bin": {
     "agent-usage": "./bin/source-usage.mjs",
-    "memory-audit": "./bin/memory-audit.mjs",
     "memory-prune": "./skills/prune-memory/scripts/prune-expired-memories.sh",
-    "skill-audit": "./bin/skill-audit.mjs",
     "skill-cost": "./bin/usage-cost.mjs",
     "skill-perf": "./bin/skill-perf.mjs"
   },

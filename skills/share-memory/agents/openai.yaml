@@ -1,0 +1,4 @@
+interface:
+  display_name: "Share Memory"
+  short_description: "Promote durable memory into shared policy"
+  default_prompt: "Use $share-memory to raise durable memories into their tracked source of truth."

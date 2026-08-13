@@ -14,8 +14,8 @@ Before writing, confirm all of the following:
 2. The skill has a checkable applicability condition and a recognizable user goal.
 3. The target skill root is known. Use the repository's local `skills/` directory
    when requested; otherwise ask before writing to a personal skill store.
-4. No existing skill already owns the workflow. Run `skill-audit --root <skill-root>
-   --repo <repository> --json` and inspect close names and descriptions.
+4. No existing skill already owns the workflow. Search the target inventory's
+   `SKILL.md` names and descriptions before choosing a new name.
 
 ## Author
 
@@ -35,8 +35,8 @@ Before writing, confirm all of the following:
 6. Link every optional resource directly from `SKILL.md`. Avoid nested reference
    chains and duplicate prose.
 7. Test every bundled script on synthetic or non-sensitive fixtures.
-8. Run `skill-audit --root <skill-root> --repo <repository> --strict`. Fix structural
-   errors, duplicate names, folder mismatches, and broken relative links.
+8. Run the target repository's skill validator. Fix structural errors, duplicate
+   names, folder mismatches, and broken relative links.
 9. Forward-test complex skills with a realistic raw task when safe. Do not give the
    tester the intended answer or diagnosis.
 10. Follow the target repository's review and delivery conventions.

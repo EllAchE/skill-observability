@@ -1,4 +1,0 @@
-interface:
-  display_name: "Audit Skills"
-  short_description: "Audit skill health and retirement evidence"
-  default_prompt: "Use $audit-skills to identify broken, unused, or retirement-candidate skills."

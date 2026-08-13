@@ -26,8 +26,8 @@ description: Revise an existing agent skill while preserving its ownership bound
 5. Maintain progressive disclosure: core decisions in `SKILL.md`, optional detail
    in one-level-deep references, deterministic repeated work in scripts.
 6. Test changed scripts and realistic failure paths.
-7. Run `skill-audit --root <skill-root> --repo <repository> --strict` and inspect the
-   target's JSON record for structural errors and broken links.
+7. Run the target repository's skill validator and check the edited skill for
+   structural errors and broken relative links.
 8. Forward-test behavior-changing revisions when safe, using a raw representative
    task without leaking the desired result.
 9. Treat an already-codified request as a valid no-op. Cite the existing section
